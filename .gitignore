@@ -8,4 +8,4 @@ node_modules/
 dist/
 *.py[cod]
 .vscode/
-test_schoolbus.db
+.db
