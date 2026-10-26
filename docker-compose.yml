@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-schoolbus}
+      POSTGRES_USER: ${POSTGRES_USER:-schoolbus_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-schoolbus_app} -d ${POSTGRES_DB:-schoolbus}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-schoolbus_app}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-schoolbus}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks: [internal]
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "8080:80"
+    networks: [internal]
+
+volumes:
+  postgres_data:
+networks:
+  internal:
